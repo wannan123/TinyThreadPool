@@ -1,0 +1,3 @@
+/home/wuchengen/Desktop/TinyThreadPool/build/CMakeFiles/rebuild_cache.dir
+/home/wuchengen/Desktop/TinyThreadPool/build/CMakeFiles/edit_cache.dir
+/home/wuchengen/Desktop/TinyThreadPool/build/CMakeFiles/test.dir
