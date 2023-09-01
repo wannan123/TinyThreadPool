@@ -185,9 +185,10 @@ void ThreadPool::manager(void* arg)
             for (int i = 0; i < pool->maxNum && counter < NUMBER
                 && pool->liveNum < pool->maxNum; ++i)
             {
+                //此时thread_id为 non-executing thread
                 if (pool->threadIDs[i].get_id() == std::thread::id())
                 {
-                    std::cout << "Create a new thread..." <<std::endl;
+                    std::cout << "Create a new thread..." <<std::thread::id()<<std::endl;
                     pool->threadIDs[i] = std::thread(worker,pool);
                     counter++;
                     pool->liveNum++;
