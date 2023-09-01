@@ -36,11 +36,12 @@ ThreadPool::~ThreadPool()
     shutdown = 1;
     // 阻塞回收管理者线程
     if(managerID.joinable()) managerID.join();
-    notempty.notify_all();
+    
     // 唤醒阻塞的消费者线程
+    notempty.notify_all();
     for (int i = 0; i < liveNum; ++i)
     {
-        if(managerID.joinable()) managerID.join();
+        if(threadIDs[i].joinable()) threadIDs[i].join();
     }
 
 }
@@ -59,9 +60,9 @@ void ThreadPool::threadPoolAdd(Task task)
     }
     // 添加任务
     taskQ.push(task);
-
-    notempty.notify_all();
     lk.unlock();
+    notempty.notify_all();
+    
 }
 void ThreadPool::threadPoolAdd(callback f,void* arg)
 {
@@ -76,8 +77,9 @@ void ThreadPool::threadPoolAdd(callback f,void* arg)
     }
     // 添加任务
     taskQ.push(Task(f,arg));
-    notempty.notify_all();
     lk.unlock();
+    notempty.notify_all();
+    
 }
 int ThreadPool::getWorkNum()
 {
@@ -107,7 +109,7 @@ void ThreadPool::worker(void* arg)
         std::unique_lock<std::mutex> lk(pool->mutexPool,std::defer_lock);
         lk.lock();
         // 当前任务队列是否为空                  
-        while (pool->taskQ.empty() == 0 && !pool->shutdown)
+        while (pool->taskQ.empty() && !pool->shutdown)
         {
             // 阻塞工作线程
             pool->notempty.wait(lk);
@@ -120,19 +122,9 @@ void ThreadPool::worker(void* arg)
                 if (pool->liveNum > pool->minNum)
                 {
                     pool->liveNum--;
+                    std::cout << "threadid: " << pthread_self() << " exit......" << std::endl;
                     lk.unlock();
-                    for (int i = 0; i < pool->maxNum; ++i)
-                    {
-                        if (pool->threadIDs[i].get_id() == std::thread::id())
-                        {
-                            std::cout << "threadExit() function: thread " 
-                                << std::to_string(pthread_self()) << " exiting..." << std::endl;
-                            if(pool->threadIDs[i].joinable())pool->threadIDs[i].join();
-                            break;
-                        }
-                    }
-                    
-                    return;
+                    return;//这里直接return可以结束进程，并且在线程池析构函数中将会用join释放资源
                 }
             }
         }
@@ -140,15 +132,16 @@ void ThreadPool::worker(void* arg)
         // 判断线程池是否被关闭了
         if (pool->shutdown)
         {
-            lk.unlock();
-            std::cout << "threadExit() function: thread " 
-                << std::to_string(pthread_self()) << " exiting..." << std::endl;
             // pool->threadExit();
-            return;
+            std::cout << "threadid: " << pthread_self() << "exit......" << std::endl;
+            return;//这里直接return可以结束进程，并且在线程池析构函数中将会用join释放资源
         }
 
         // 从任务队列中取出一个任务
-        Task task = pool->taskQ.front();
+        Task task;
+        if(!pool->taskQ.empty()){
+            task = pool->taskQ.front();
+        }
         pool->taskQ.pop();
         pool->busyNum++;
         // 解锁
@@ -158,7 +151,7 @@ void ThreadPool::worker(void* arg)
         std::cout<<"thread"<<std::to_string(pthread_self())<<"start working..."<<std::endl;
         task.func(task.arg);
         free(task.arg);
-        task.arg = NULL;
+        task.arg = nullptr;
 
         std::cout<<"thread"<<std::to_string(pthread_self())<<"end working..."<<std::endl;
         lk.lock();
@@ -232,3 +225,6 @@ void ThreadPool::manager(void* arg)
     // }
 //     tid1.join();
 // }
+
+
+

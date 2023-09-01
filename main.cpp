@@ -15,18 +15,19 @@ void taskFunc(void* arg)
 
 int main()
 {
-    ThreadPool pool(5,10);
+    ThreadPool pool(3,10);
     int i;
     for(i = 0; i < 100; ++i)
     {
         int* num = new int(i+100);
         pool.threadPoolAdd(taskFunc, (void*)num);
     }
-    for(;i < 200; ++i)
-    {
-        sleep(1);
-        int* num = new int(i+100);
-        pool.threadPoolAdd(taskFunc, (void*)num);
-    }
+    sleep(20);
+    // for(;i < 200; ++i) 
+    // {
+    //     sleep(1);
+    //     int* num = new int(i+100);
+    //     pool.threadPoolAdd(taskFunc, (void*)num);
+    // }
     return 0;
 }
